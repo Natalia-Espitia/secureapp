@@ -1,106 +1,104 @@
-# SecureApp - Enterprise Architecture Workshop
+# Secure Application Design Lab
 
-This project implements a secure two-server design:
+This repository contains a complete base solution for the secure application workshop:
 
-- Server 1 (Apache): serves async HTML+JavaScript client over HTTPS.
-- Server 2 (Spring): exposes REST endpoints over HTTPS.
+- Apache serves the asynchronous HTML and JavaScript client over HTTPS.
+- Spring Boot exposes REST endpoints over HTTPS.
+- Passwords are stored as BCrypt hashes.
+- The browser authenticates with a login flow and uses Bearer tokens for protected requests.
+- Deployment is simplified to one AWS EC2 instance with Apache and Spring running on the same machine.
 
-## Implemented in this repository
+## Repository Structure
 
-- Spring backend with secure auth endpoints:
-  - `POST /api/auth/register`
-  - `POST /api/auth/login`
-  - `GET /api/health`
-- Password hashing with BCrypt (`spring-security-crypto`), no plaintext passwords.
-- Async client for register/login in `apache-client/`.
-- TLS-ready Spring config in `application.properties` (keystore via env vars).
+- `apache/site/`: static client files to publish on the Apache server.
+- `deploy/apache/secureapp.conf`: Apache virtual host with HTTPS and reverse proxy to Spring.
+- `deploy/spring/secureapp.service`: `systemd` unit for the Spring backend.
+- `deploy/scripts/`: helper scripts for keystore generation.
+- `src/main/java/`: Spring Boot backend.
+- `docs/architecture.md`: architecture design document.
+- `docs/aws-deployment.md`: AWS and TLS deployment guide.
+- `docs/video-checklist.md`: suggested script for the final demo video.
 
-## Local run (Spring)
+## Simplified Architecture
 
-1. Set SSL env vars if needed:
-
-```powershell
-$env:SSL_KEY_STORE="ecikeystores/ecikeystore.p12"
-$env:SSL_KEY_STORE_PASSWORD="123456"
-$env:SSL_KEY_ALIAS="ecikeypair"
-$env:SERVER_PORT="5000"
+```mermaid
+flowchart LR
+    Browser["Browser"] -->|"HTTPS:443"| Apache["EC2 - Apache + Static Client"]
+    Apache -->|"HTTPS:5000 /api"| Spring["Same EC2 - Spring Boot REST API"]
+    Spring -->|"Local file DB"| H2["H2 database with BCrypt hashes"]
+    Apache -->|"Let's Encrypt certificate"| LE["Certbot"]
+    Spring -->|"PKCS12 generated from the same certificate"| LE
 ```
 
-2. Run backend:
+This is the easiest deployment path because you already have `arepecilab.duckdns.org` and Apache working on one EC2.
 
-```powershell
-./mvnw spring-boot:run
-```
+## Backend Features
 
-3. Test endpoint:
+- `POST /api/auth/register`: creates a user and stores the password as a BCrypt hash.
+- `POST /api/auth/login`: validates credentials and returns a Bearer token.
+- `POST /api/auth/logout`: invalidates the active token.
+- `GET /api/public/info`: public endpoint to confirm HTTPS connectivity.
+- `GET /api/secure/profile`: protected endpoint with account data.
+- `GET /api/secure/status`: protected endpoint proving authenticated access.
 
-```powershell
-curl -k https://localhost:5000/api/health
-```
+## Local Execution
 
-## AWS deployment target architecture
-
-- EC2 instance A:
-  - Apache HTTP Server
-  - Serves static files from `apache-client/`
-  - TLS certificate from Let's Encrypt
-- EC2 instance B:
-  - Java 17 + Spring Boot app
-  - Reverse proxy or direct HTTPS endpoint
-  - TLS certificate from Let's Encrypt
-
-## Apache setup (server A)
-
-1. Install Apache (Amazon Linux 2023 guide):
-   - Follow AWS LAMP guide in class hint.
-2. Copy `apache-client/*` to Apache web root (`/var/www/html/`).
-3. Configure HTTPS virtual host (example in `ops/apache-secureapp.conf`).
-4. Install certbot and generate cert:
+### 1. Build
 
 ```bash
-sudo dnf install -y certbot python3-certbot-apache
-sudo certbot --apache -d client.your-domain.com
+mvn clean package
 ```
 
-## Spring server setup (server B)
+### 2. Run locally with the bundled self-signed keystore
 
-1. Build jar:
-
-```powershell
-./mvnw clean package
+```bash
+mvn spring-boot:run
 ```
 
-2. Copy jar to EC2 and run with env vars.
-3. Terminate TLS either:
-   - in Spring directly using PKCS12, or
-   - with Nginx/Apache reverse proxy + Let's Encrypt in front of Spring.
+The default backend URL is `https://localhost:5000`.
 
-Recommended for workshop rubric: use Let's Encrypt certificate for public Spring domain.
+### 3. Publish the client on Apache
 
-## Security checklist
+Copy everything from `apache/site/` to your Apache document root, for example:
 
-- [x] Passwords hashed with BCrypt
-- [x] Async client using fetch/await
-- [x] HTTPS enabled in Spring configuration
-- [ ] Let's Encrypt certificate active on Apache server
-- [ ] Let's Encrypt certificate active on Spring/API domain
-- [ ] Both servers deployed separately in AWS
+```bash
+sudo mkdir -p /var/www/secureapp
+sudo cp -r apache/site/* /var/www/secureapp/
+```
 
-## Testing checklist for submission evidence
+## Configuration
 
-Capture screenshots/videos of:
+Important environment variables:
 
-1. HTTPS browser lock on Apache client URL.
-2. HTTPS call from client to Spring API URL.
-3. Register success response.
-4. Login success response.
-5. Login failure response (wrong password).
-6. Password hash evidence (never plaintext).
+- `PORT`: backend port, default `5000`.
+- `SERVER_SSL_ENABLED`: enable or disable TLS on Spring.
+- `SERVER_SSL_KEY_STORE`: PKCS12 file path for the Spring certificate.
+- `SERVER_SSL_KEY_STORE_PASSWORD`: keystore password.
+- `SERVER_SSL_KEY_ALIAS`: certificate alias.
+- `SPRING_DATASOURCE_URL`: default is a file-based H2 database.
+- `APP_ALLOWED_ORIGINS`: allowed origins for direct cross-origin tests. When using Apache reverse proxy, keep it as the Apache hostname.
+- `APP_SESSION_TTL`: token TTL, default `30m`.
 
-## Final deliverables
+## Deployment on AWS
 
-- GitHub repo with source code and this README.
-- Architecture diagram (client -> Apache -> Spring).
-- Deployment instructions and commands used.
-- Screenshots from tests.
-- Demo video explaining security features and AWS deployment.
+Use the detailed instructions in [docs/aws-deployment.md](/C:/Users/jesjc/OneDrive/Documentos/secureapp/docs/aws-deployment.md).
+
+High-level flow:
+
+1. Keep Apache on the current EC2 and install the virtual host from `deploy/apache/secureapp.conf`.
+2. Build the Spring jar and copy it to `/opt/secureapp/`.
+3. Reuse the same Let's Encrypt certificate from Apache and convert it into PKCS12 with `deploy/scripts/build-pkcs12-from-letsencrypt.sh`.
+4. Install the `systemd` service from `deploy/spring/secureapp.service`.
+5. Start Spring on `127.0.0.1:5000` with TLS enabled.
+6. Let Apache proxy `/api` to the local Spring service.
+
+## Evidence to Include in the Final Submission
+
+- GitHub repository with this codebase and your deployment notes.
+- Updated README with the final public URLs and screenshots.
+- Screenshots proving:
+  - Apache loads the client over HTTPS.
+  - Login works.
+  - Protected requests reach Spring over HTTPS.
+  - Apache and Spring are both using TLS on the same EC2.
+- A short demo video using the checklist in [docs/video-checklist.md](/C:/Users/jesjc/OneDrive/Documentos/secureapp/docs/video-checklist.md).
