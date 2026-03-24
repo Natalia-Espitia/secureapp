@@ -17,7 +17,6 @@ Este repositorio contiene una solución base completa para el taller de aplicaci
 - `src/main/java/`: backend de Spring Boot.
 - `docs/architecture.md`: documento de diseño de arquitectura.
 - `docs/aws-deployment.md`: guía de despliegue en AWS y TLS.
-- `docs/video-checklist.md`: guion sugerido para el video final de demostración.
 - `img/demosecureapp.mp4`: video de demostración final del proyecto.
 
 ## Arquitectura Simplificada
@@ -31,7 +30,7 @@ flowchart LR
     Spring -->|"PKCS12 generado desde el mismo certificado"| LE
 ```
 
-Esta es la ruta de despliegue más simple porque ya cuentas con `arepnat.duckdns.org` y Apache funcionando en una sola EC2.
+Esta es la ruta de despliegue más simple porque ya se cuenta con `arepnat.duckdns.org` y Apache funcionando en una sola EC2.
 
 ## Funcionalidades del Backend
 
@@ -95,12 +94,4 @@ Flujo general:
 
 ## Evidencia para la Entrega Final
 
-- Repositorio de GitHub con esta base de código y tus notas de despliegue.
-- README actualizado con las URLs públicas finales y capturas de pantalla.
-- Capturas que demuestren:
-  - Apache carga el cliente sobre HTTPS.
-  - El inicio de sesión funciona.
-  - Las solicitudes protegidas llegan a Spring sobre HTTPS.
-  - Apache y Spring están usando TLS en la misma EC2.
-- Video de demostración incluido en el repositorio: [img/demosecureapp.mp4](img/demosecureapp.mp4).
-- Guion usado para la grabación: [docs/video-checklist.md](docs/video-checklist.md).
+- Video de demostración: [img/demosecureapp.mp4](img/demosecureapp.mp4).
