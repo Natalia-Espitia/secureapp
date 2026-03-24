@@ -1,53 +1,53 @@
-# AWS Deployment Guide
+# Guía de Despliegue en AWS
 
-## Topology
+## Topología
 
-- `EC2`: Apache + static site + Spring Boot + Let's Encrypt certificate for `arepnat.duckdns.org`
+- `EC2`: Apache + sitio estático + Spring Boot + certificado de Let's Encrypt para `arepnat.duckdns.org`
 
-## 1. Prepare the current EC2
+## 1. Preparar la EC2 actual
 
-1. Confirm the DuckDNS record for `arepnat.duckdns.org` points to the Apache EC2 public IP.
-2. Install the Apache modules required for TLS and proxying:
+1. Confirma que el registro de DuckDNS para `arepnat.duckdns.org` apunta a la IP pública de la EC2 con Apache.
+2. Instala los módulos de Apache requeridos para TLS y proxy:
 
 ```bash
 sudo dnf install -y mod_ssl
 sudo mkdir -p /var/www/secureapp
 ```
 
-3. Copy the static client:
+3. Copia el cliente estático:
 
 ```bash
 sudo cp -r apache/site/* /var/www/secureapp/
 ```
 
-4. Enable the Apache site using `deploy/apache/secureapp.conf`.
-5. Make sure the security group allows inbound `80` and `443`.
+4. Habilita el sitio de Apache usando `deploy/apache/secureapp.conf`.
+5. Asegúrate de que el Security Group permita entradas por `80` y `443`.
 
-## 2. Install Java 17 on the same EC2
+## 2. Instalar Java 17 en la misma EC2
 
 ```bash
 sudo dnf install -y java-17-amazon-corretto-headless
 ```
 
-## 3. Build and copy the Spring jar
+## 3. Compilar y copiar el jar de Spring
 
-From your development machine:
+Desde tu máquina de desarrollo:
 
 ```bash
 mvn clean package
 scp target/secureapp-0.0.1-SNAPSHOT.jar ec2-user@<YOUR_EC2_PUBLIC_IP>:/tmp/
 ```
 
-On the EC2:
+En la EC2:
 
 ```bash
 sudo mkdir -p /opt/secureapp/data /opt/secureapp/certs
 sudo mv /tmp/secureapp-0.0.1-SNAPSHOT.jar /opt/secureapp/
 ```
 
-## 4. Reuse the existing Let's Encrypt certificate
+## 4. Reutilizar el certificado existente de Let's Encrypt
 
-If Apache already has the certificate for `arepnat.duckdns.org`, convert it to PKCS12 for Spring:
+Si Apache ya tiene el certificado para `arepnat.duckdns.org`, conviértelo a PKCS12 para Spring:
 
 ```bash
 sudo bash deploy/scripts/build-pkcs12-from-letsencrypt.sh \
@@ -57,12 +57,12 @@ sudo bash deploy/scripts/build-pkcs12-from-letsencrypt.sh \
   secureapp-local
 ```
 
-## 5. Install the Spring service
+## 5. Instalar el servicio de Spring
 
-1. Copy `deploy/spring/secureapp.service` to `/etc/systemd/system/secureapp.service`.
-2. Replace the placeholder keystore password.
-3. Keep `SERVER_ADDRESS=127.0.0.1` so the backend is not public.
-4. Start the service:
+1. Copia `deploy/spring/secureapp.service` a `/etc/systemd/system/secureapp.service`.
+2. Reemplaza la contraseña placeholder del keystore.
+3. Mantén `SERVER_ADDRESS=127.0.0.1` para que el backend no sea público.
+4. Inicia el servicio:
 
 ```bash
 sudo systemctl daemon-reload
@@ -70,35 +70,35 @@ sudo systemctl enable --now secureapp
 sudo systemctl status secureapp
 ```
 
-## 6. Configure Apache reverse proxy
+## 6. Configurar el proxy inverso de Apache
 
-Important directives:
+Directivas importantes:
 
 - `ProxyPass /api https://127.0.0.1:5000/api`
 - `ProxyPassReverse /api https://127.0.0.1:5000/api`
 - `SSLProxyEngine on`
 - `SSLProxyCheckPeerName off`
 
-After copying the config:
+Después de copiar la configuración:
 
 ```bash
 sudo apachectl configtest
 sudo systemctl restart httpd
 ```
 
-## 7. Validation Checklist
+## 7. Lista de validación
 
-Run these checks and capture screenshots:
+Ejecuta estas verificaciones y toma capturas:
 
 ```bash
 curl -I https://arepnat.duckdns.org
 curl https://arepnat.duckdns.org/api/public/info
 ```
 
-Then from the browser:
+Luego, desde el navegador:
 
-1. Open `https://arepnat.duckdns.org`.
-2. Register a user.
-3. Login.
-4. Load the protected profile.
-5. Show the browser lock icon and certificate details.
+1. Abre `https://arepnat.duckdns.org`.
+2. Registra un usuario.
+3. Inicia sesión.
+4. Carga el perfil protegido.
+5. Muestra el candado del navegador y los detalles del certificado.

@@ -1,106 +1,106 @@
-# Application Architecture Design
+# Diseño de Arquitectura de la Aplicación
 
-## Objective
+## Objetivo
 
-Design and deploy a secure web application on AWS using one EC2 instance with two application layers:
+Diseñar y desplegar una aplicación web segura en AWS usando una instancia EC2 con dos capas de aplicación:
 
-- Apache for secure delivery of the asynchronous HTML and JavaScript client.
-- Spring Boot for secure REST services and user authentication.
+- Apache para la entrega segura del cliente HTML y JavaScript asíncrono.
+- Spring Boot para servicios REST seguros y autenticación de usuarios.
 
-## Components
+## Componentes
 
-### 1. Apache server
+### 1. Servidor Apache
 
-- Runs on an EC2 instance with Amazon Linux 2023.
-- Hosts static files from `apache/site/`.
-- Terminates TLS for the public site using Let's Encrypt.
-- Reverse proxies `/api` traffic to the local Spring backend through HTTPS.
+- Se ejecuta en una instancia EC2 con Amazon Linux 2023.
+- Aloja archivos estáticos desde `apache/site/`.
+- Termina TLS para el sitio público usando Let's Encrypt.
+- Hace proxy inverso del tráfico `/api` hacia el backend local de Spring por HTTPS.
 
-### 2. Spring Boot server
+### 2. Servidor Spring Boot
 
-- Runs on the same EC2 instance as Apache.
-- Exposes REST endpoints over HTTPS only.
-- Stores users in H2 and hashes passwords using BCrypt before persisting them.
-- Issues random Bearer session tokens after successful login.
-- Binds to `127.0.0.1:5000` to stay internal to the machine.
+- Se ejecuta en la misma instancia EC2 que Apache.
+- Expone endpoints REST solo sobre HTTPS.
+- Guarda usuarios en H2 y aplica hash BCrypt a las contraseñas antes de persistirlas.
+- Emite tokens de sesión Bearer aleatorios tras un inicio de sesión exitoso.
+- Se enlaza a `127.0.0.1:5000` para permanecer interno a la máquina.
 
-### 3. Browser client
+### 3. Cliente en el navegador
 
-- Loads HTML, CSS, and JavaScript from Apache over HTTPS.
-- Uses `fetch` with `async/await` to call the backend asynchronously.
-- Stores the Bearer token in `sessionStorage` for the current browser tab only.
+- Carga HTML, CSS y JavaScript desde Apache por HTTPS.
+- Usa `fetch` con `async/await` para llamar al backend de forma asíncrona.
+- Guarda el token Bearer en `sessionStorage` solo para la pestaña actual del navegador.
 
-## Logical Relationship Between Components
+## Relación Lógica Entre Componentes
 
 ```mermaid
 sequenceDiagram
-    participant U as User Browser
-    participant A as Apache on EC2
-    participant S as Spring on same EC2
-    participant D as H2 Database
+    participant U as Navegador del usuario
+    participant A as Apache en EC2
+    participant S as Spring en la misma EC2
+    participant D as Base de datos H2
 
     U->>A: GET https://arepnat.duckdns.org/
-    A-->>U: HTML + CSS + JavaScript over TLS
+    A-->>U: HTML + CSS + JavaScript sobre TLS
     U->>A: POST /api/auth/login
-    A->>S: HTTPS reverse proxy to localhost:5000
-    S->>D: Compare BCrypt password hash
-    D-->>S: User record
-    S-->>A: Session token JSON
-    A-->>U: Session token JSON
-    U->>A: GET /api/secure/profile with Bearer token
-    A->>S: HTTPS reverse proxy with Authorization header
-    S-->>A: Protected JSON response
-    A-->>U: Protected JSON response
+    A->>S: Proxy inverso HTTPS a localhost:5000
+    S->>D: Compara hash BCrypt de contraseña
+    D-->>S: Registro de usuario
+    S-->>A: JSON con token de sesión
+    A-->>U: JSON con token de sesión
+    U->>A: GET /api/secure/profile con token Bearer
+    A->>S: Proxy inverso HTTPS con encabezado Authorization
+    S-->>A: Respuesta JSON protegida
+    A-->>U: Respuesta JSON protegida
 ```
 
-## Security Decisions
+## Decisiones de Seguridad
 
 ### TLS
 
-- Apache uses a public Let's Encrypt certificate for `arepnat.duckdns.org`.
-- Spring reuses that same certificate after converting it to PKCS12.
-- Apache proxies to Spring with HTTPS on `127.0.0.1:5000`.
+- Apache usa un certificado público de Let's Encrypt para `arepnat.duckdns.org`.
+- Spring reutiliza ese mismo certificado tras convertirlo a PKCS12.
+- Apache hace proxy a Spring con HTTPS en `127.0.0.1:5000`.
 
-### Password storage
+### Almacenamiento de contraseñas
 
-- Passwords are never stored in plain text.
-- The backend uses BCrypt through Spring Security's `PasswordEncoder`.
-- During login, the submitted password is compared with the stored hash.
+- Las contraseñas nunca se almacenan en texto plano.
+- El backend usa BCrypt mediante `PasswordEncoder` de Spring Security.
+- Durante el login, la contraseña enviada se compara con el hash almacenado.
 
-### Authentication
+### Autenticación
 
-- Public endpoints are limited to registration, login, and a public info endpoint.
-- Successful login returns a cryptographically strong random session token.
-- Protected endpoints require `Authorization: Bearer <token>`.
-- Tokens expire automatically according to `APP_SESSION_TTL`.
+- Los endpoints públicos se limitan a registro, login y un endpoint de información pública.
+- Un login exitoso devuelve un token de sesión aleatorio criptográficamente robusto.
+- Los endpoints protegidos requieren `Authorization: Bearer <token>`.
+- Los tokens expiran automáticamente según `APP_SESSION_TTL`.
 
-### Configuration management
+### Gestión de configuración
 
-- Sensitive or environment-specific values are injected by environment variables.
-- Certificates are not hardcoded in the Java code.
-- The keystore password is expected to come from `systemd` environment configuration on the application service.
+- Los valores sensibles o específicos de entorno se inyectan por variables de entorno.
+- Los certificados no están codificados directamente en el código Java.
+- Se espera que la contraseña del keystore provenga de la configuración de entorno de `systemd` en el servicio de la aplicación.
 
-## AWS Secure Deployment Strategy
+## Estrategia de Despliegue Seguro en AWS
 
-### Recommended networking
+### Red recomendada
 
-- Security group inbound rules:
-  - `22` for SSH from your admin IP.
-  - `80` and `443` from the Internet.
-- Do not expose port `5000` publicly.
-- Spring stays local by listening on `127.0.0.1`.
+- Reglas de entrada del Security Group:
+  - `22` para SSH desde tu IP de administración.
+  - `80` y `443` desde Internet.
+- No expongas el puerto `5000` públicamente.
+- Spring permanece local escuchando en `127.0.0.1`.
 
-### OS hardening basics for the lab
+### Endurecimiento básico del SO para el laboratorio
 
-- Use a dedicated Linux user for the application process when possible.
-- Run Spring as a `systemd` service instead of an interactive shell.
-- Keep certificates under `/opt/secureapp/certs/` with restricted permissions.
-- Avoid embedding secrets in the repository.
+- Usa un usuario Linux dedicado para el proceso de la aplicación cuando sea posible.
+- Ejecuta Spring como servicio `systemd` en lugar de una consola interactiva.
+- Mantén certificados en `/opt/secureapp/certs/` con permisos restringidos.
+- Evita incluir secretos dentro del repositorio.
 
-## Why This Architecture Matches the Rubric
+## Por Qué Esta Arquitectura Cumple la Rúbrica
 
-- Apache and Spring are separated into different services.
-- TLS protects client downloads and backend API traffic.
-- Login uses hashed password storage.
-- The client is asynchronous and browser-based.
-- The deployment strategy is directly aligned with AWS EC2 and Let's Encrypt.
+- Apache y Spring están separados en servicios distintos.
+- TLS protege la descarga del cliente y el tráfico de API del backend.
+- El login usa almacenamiento de contraseñas con hash.
+- El cliente es asíncrono y basado en navegador.
+- La estrategia de despliegue está alineada directamente con AWS EC2 y Let's Encrypt.
