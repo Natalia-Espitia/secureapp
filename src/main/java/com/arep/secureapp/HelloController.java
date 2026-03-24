@@ -6,8 +6,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController 
 public class HelloController {
 
-    @GetMapping("/") 
+    @GetMapping("/api/health") 
     public String index() { 
-    return "Greetings from Spring Boot!"; 
+    return "secureapp-backend-ok"; 
     } 
 } 
