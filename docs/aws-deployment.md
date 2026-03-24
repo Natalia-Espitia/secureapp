@@ -2,11 +2,11 @@
 
 ## Topology
 
-- `EC2`: Apache + static site + Spring Boot + Let's Encrypt certificate for `arepecilab.duckdns.org`
+- `EC2`: Apache + static site + Spring Boot + Let's Encrypt certificate for `arepnat.duckdns.org`
 
 ## 1. Prepare the current EC2
 
-1. Confirm the DuckDNS record for `arepecilab.duckdns.org` points to the Apache EC2 public IP.
+1. Confirm the DuckDNS record for `arepnat.duckdns.org` points to the Apache EC2 public IP.
 2. Install the Apache modules required for TLS and proxying:
 
 ```bash
@@ -47,11 +47,11 @@ sudo mv /tmp/secureapp-0.0.1-SNAPSHOT.jar /opt/secureapp/
 
 ## 4. Reuse the existing Let's Encrypt certificate
 
-If Apache already has the certificate for `arepecilab.duckdns.org`, convert it to PKCS12 for Spring:
+If Apache already has the certificate for `arepnat.duckdns.org`, convert it to PKCS12 for Spring:
 
 ```bash
 sudo bash deploy/scripts/build-pkcs12-from-letsencrypt.sh \
-  arepecilab.duckdns.org \
+  arepnat.duckdns.org \
   /opt/secureapp/certs/secureapp-local.p12 \
   "<CHANGE_ME>" \
   secureapp-local
@@ -91,13 +91,13 @@ sudo systemctl restart httpd
 Run these checks and capture screenshots:
 
 ```bash
-curl -I https://arepecilab.duckdns.org
-curl https://arepecilab.duckdns.org/api/public/info
+curl -I https://arepnat.duckdns.org
+curl https://arepnat.duckdns.org/api/public/info
 ```
 
 Then from the browser:
 
-1. Open `https://arepecilab.duckdns.org`.
+1. Open `https://arepnat.duckdns.org`.
 2. Register a user.
 3. Login.
 4. Load the protected profile.

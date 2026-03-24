@@ -30,7 +30,7 @@ flowchart LR
     Spring -->|"PKCS12 generated from the same certificate"| LE
 ```
 
-This is the easiest deployment path because you already have `arepecilab.duckdns.org` and Apache working on one EC2.
+This is the easiest deployment path because you already have `arepnat.duckdns.org` and Apache working on one EC2.
 
 ## Backend Features
 

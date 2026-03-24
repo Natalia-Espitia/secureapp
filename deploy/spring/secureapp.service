@@ -13,7 +13,7 @@ Environment=SERVER_SSL_KEY_STORE_TYPE=PKCS12
 Environment=SERVER_SSL_KEY_STORE_PASSWORD=change-this-password
 Environment=SERVER_SSL_KEY_ALIAS=secureapp-local
 Environment=SPRING_DATASOURCE_URL=jdbc:h2:file:/opt/secureapp/data/secureappdb;AUTO_SERVER=TRUE
-Environment=APP_ALLOWED_ORIGINS=https://arepecilab.duckdns.org
+Environment=APP_ALLOWED_ORIGINS=https://arepnat.duckdns.org
 ExecStart=/usr/bin/java -jar /opt/secureapp/secureapp-0.0.1-SNAPSHOT.jar
 SuccessExitStatus=143
 Restart=on-failure

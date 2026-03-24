@@ -8,8 +8,8 @@ Use this as the structure for the final video:
    - `deploy/`
    - `docs/`
 2. Show the AWS console with the single EC2 instance.
-3. Show the DuckDNS domain `arepecilab.duckdns.org`.
-4. Open `https://arepecilab.duckdns.org` in the browser and show the TLS lock.
+3. Show the DuckDNS domain `arepnat.duckdns.org`.
+4. Open `https://arepnat.duckdns.org` in the browser and show the TLS lock.
 5. Register a new user.
 6. Login and show the JSON token response in the UI.
 7. Click `Load profile` and `Load secure status`.

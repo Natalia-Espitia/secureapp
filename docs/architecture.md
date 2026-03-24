@@ -39,7 +39,7 @@ sequenceDiagram
     participant S as Spring on same EC2
     participant D as H2 Database
 
-    U->>A: GET https://arepecilab.duckdns.org/
+    U->>A: GET https://arepnat.duckdns.org/
     A-->>U: HTML + CSS + JavaScript over TLS
     U->>A: POST /api/auth/login
     A->>S: HTTPS reverse proxy to localhost:5000
@@ -57,7 +57,7 @@ sequenceDiagram
 
 ### TLS
 
-- Apache uses a public Let's Encrypt certificate for `arepecilab.duckdns.org`.
+- Apache uses a public Let's Encrypt certificate for `arepnat.duckdns.org`.
 - Spring reuses that same certificate after converting it to PKCS12.
 - Apache proxies to Spring with HTTPS on `127.0.0.1:5000`.
 
